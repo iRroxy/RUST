@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "hello",
+    "minigrep",
+    "prac",
+]
+resolver = "2"
