@@ -1,105 +1,31 @@
-#![warn(dead_code)]
-use std::fmt;
+#![allow(dead_code)]
 
-#[derive(Debug)]
-pub enum BankError {
-    InsufficientFunds { balance: f64 , required: f64 },
-    InvalidAmount(f64),
-}
-
-impl fmt::Display for BankError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            BankError::InsufficientFunds { balance, required } => {
-                write!(f, "not enough!: {:.2}, try to withdraw {:.2}", balance, required)
-            }
-
-            BankError::InvalidAmount(amount) => {
-                write!(f, "error! {:.2}", amount)
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct BankAccount {
-    owner: String,
-    balance: f64,
-}
-
-impl BankAccount {
-    pub fn new(owner: String, initial_balance: f64) -> Self {
-        Self { owner, balance: initial_balance, }
-    }
-
-    pub fn deposit(&mut self, amount: f64) -> Result<(), BankError> {
-        if amount <= 0.0 {
-            return  Err(BankError::InvalidAmount(amount));
-        }
-        self.balance += amount;
-        Ok(())
-    }
-    pub fn withdraw(&mut self, amount: f64) -> Result<(), BankError> {
-        if amount <= 0.0 {
-            return Err(BankError::InvalidAmount(amount));
-        }
-        if self.balance < amount {
-            return Err(BankError::InsufficientFunds { balance: self.balance, required: amount });
-        }
-        self.balance -= amount;
-        Ok(())
-    }
-
-
-    pub fn balance(&self) -> f64 {
-        self.balance
-    }
-
-    pub fn owner(&self) -> &str {
-        &self.owner
-    }
-}
-
-impl fmt::Display for BankAccount {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[account]owner: {},current balance: {:.2}", self.owner, self.balance )
-    }
-}
-
-impl BankAccount {
-    pub fn transfer(&mut self, target: &mut BankAccount, amount: f64) -> Result<(), BankError> {
-        self.withdraw(amount)?;
-
-        target.deposit(amount)?;
-
-        Ok(())
-    }
-}
+use prac::bank::Bank;
 
 fn main() {
-    let mut my_account = BankAccount::new(String::from("Eris"), 100.0);
-    println!("initial state -> {my_account}");
+    println!("\n==== 工程化多模块银行系统测试 ====");
+    let mut bank = Bank::new(String::from("Iron Bank"));
 
-    if let Err(e) = my_account.deposit(50.0) {
-        println!("save money refuse: {e}");
+    bank.open_account(String::from("Alice"), 100.0);
+    bank.open_credit(String::from("Bob"), 0.0, 500.0);
+
+    println!("Alice 初始余额: {:.2}", bank.get_balance("Alice").unwrap());
+    println!("Bob 初始余额: {:.2}", bank.get_balance("Bob").unwrap());
+
+    println!("\n-- 测试：Bob 尝试透支转账 300 元给 Alice --");
+    match bank.transfer("Bob", "Alice", 300.0) {
+        Ok(()) => println!("转账成功！"),
+        Err(e) => println!("转账失败: {e}"),
     }
 
-    match my_account.withdraw(80.0) {
-        Ok(()) => println!("successfully withdraw"),
-        Err(e) => println!("unsuccessfully withdraw"),
-    }
-    println!("after -> {my_account}");
+    println!("Alice 当前余额: {:.2}", bank.get_balance("Alice").unwrap());
+    println!("Bob 当前余额: {:.2}", bank.get_balance("Bob").unwrap());
 
-    println!("\n---- test");
-    match  my_account.withdraw(200.0) {
-        Ok(()) => println!("success"),
-        Err(e) => println!("catch the error: {e}"),
+    println!("\n-- 测试：Bob 再次尝试透支 300 元（额度超标拦截）--");
+    match bank.transfer("Bob", "Alice", 300.0) {
+        Ok(()) => println!("转账成功"),
+        Err(e) => println!("捕获到预期错误: {e}"),
     }
 
-    println!("\n---- test");
-    if let Err(e) =  my_account.deposit(20.0) {
-        println!("catch! {e}");
-    }
-
-    println!("final account state -> {my_account} ");
+    println!("\n全行总资产: {:.2}", bank.total_assets());
 }
