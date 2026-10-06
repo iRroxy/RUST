@@ -47,30 +47,6 @@ impl fmt::Display for BankAccount {
     }
 }
 
-impl Account for BankAccount {
-    fn balance(&self) -> Money {
-        self.balance
-    }
-
-    fn deposit(&mut self, amount: Money) -> Result<(), BankError> {
-        validate_amount(amount)?;
-        self.balance += amount;
-        Ok(())
-    }
-
-    fn withdraw(&mut self, amount: Money) -> Result<(), BankError> {
-        validate_amount(amount)?;
-        if self.balance < amount {
-            return Err(BankError::InsufficientFunds {
-                balance: self.balance,
-                required: amount,
-            });
-        }
-        self.balance -= amount;
-        Ok(())
-    }
-}
-
 pub struct CreditAccount {
     owner: String,
     balance: Money,
@@ -119,6 +95,28 @@ impl Account for CreditAccount {
             });
         }
         self.balance -= amount;
+        Ok(())
+    }
+}
+
+impl Account for BankAccount {
+    fn balance(&self) -> Money {
+        self.balance
+    }
+    fn deposit(&mut self, amount: Money) -> Result<(), BankError> {
+        validate_amount(amount)?;
+        let new_balance = self.balance.checked_add(amount).ok_or(BankError::Overflow)?;
+        self.balance = new_balance;
+        Ok(())
+    }
+
+    fn withdraw(&mut self, amount: Money) -> Result<(), BankError> {
+        validate_amount(amount)?;
+        if self.balance < amount {
+            return Err(BankError::InsufficientFunds { balance: self.balance, required: amount });
+        }
+        let new_balance = self.balance.checked_sub(amount).ok_or(BankError::Overflow)?;
+        self.balance = new_balance;
         Ok(())
     }
 }

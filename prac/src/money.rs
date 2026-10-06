@@ -11,8 +11,8 @@ impl Money {
         Self(cents)
     }
 
-    pub fn from_yuan(yuan: i64) -> Self{
-        Self(yuan * 100)
+    pub fn from_yuan(yuan: i64) -> Option<Self>{
+        yuan.checked_mul(100).map(Self)
     }
 
     pub fn cents(self) -> i64 {
@@ -22,15 +22,23 @@ impl Money {
     pub fn is_positive(self) -> bool {
         self.0 > 0
     }
+
+    pub fn checked_add(self, rhs: Self) -> Option<Money> {
+        self.0.checked_add(rhs.0).map(Self)
+    }
+
+    pub fn checked_sub(self, rhs: Self) -> Option<Money> {
+        self.0.checked_sub(rhs.0).map(Self)
+    }
 }
 
 impl fmt::Display for Money {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let abs = self.0.unsigned_abs();
         if self.0 < 0 {
-            let abs = -self.0;
-            write!(f, "-{}.{:02}", abs/100, abs % 100)
+            write!(f, "-{}.{:02}", abs / 100, abs % 100)
         }else {
-            write!(f, "{}.{:02}", self.0 / 100, self.0 % 100)
+            write!(f, "{}.{:02}", abs / 100, abs % 100)
         }
     }
 }
@@ -64,5 +72,33 @@ impl SubAssign for Money {
 impl Sum for Money {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(Self::ZERO, |a, b| a+ b)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+use super::*;
+
+    #[test]
+    fn test_from_yuan_overflow() {
+        assert_eq!(Money::from_yuan(i64::MAX), None);
+        assert_eq!(Money::from_yuan(100), Some(Money::from_cents(10000)));
+    }
+
+    #[test]
+    fn test_checked_add_sub_overflow() {
+        let max = Money::from_cents(i64::MAX);
+        assert_eq!(max.checked_add(Money::from_cents(1)), None);
+
+        let min = Money::from_cents(i64::MIN);
+        assert_eq!(min.checked_sub(Money::from_cents(1)), None);
+    }
+
+    #[test]
+    fn test_display_min_does_not_panic() {
+        let min = Money::from_cents(i64::MIN);
+        let s = format!("{min}");
+        assert_eq!(s, "-92233720368547758.08");
     }
 }

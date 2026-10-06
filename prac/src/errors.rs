@@ -7,6 +7,7 @@ pub enum BankError {
     InvalidAmount(Money),
     AccountNotFound(String),
     SameAccount,
+    Overflow,
 }
 
 impl fmt::Display for BankError {
@@ -23,6 +24,9 @@ impl fmt::Display for BankError {
             }
             BankError::SameAccount => {
                 write!(f, "cannot transfer to the same account")
+            }
+            BankError::Overflow => {
+                write!(f, "arithmetic overflow occurred")
             }
         }
     }

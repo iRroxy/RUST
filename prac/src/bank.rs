@@ -96,106 +96,106 @@ use super::*;
     #[test]
     fn test_open_account_and_balance() {
         let mut bank = Bank::new("Iron Bank".to_string());
-        bank.open_account("Alice".to_string(), Money::from_yuan(100));
+        bank.open_account("Alice".to_string(), Money::from_yuan(100).unwrap());
 
         let balance = bank.get_balance("Alice").unwrap();
-        assert_eq!(balance, Money::from_yuan(100));
+        assert_eq!(balance, Money::from_yuan(100).unwrap());
     }
 
     #[test]
     fn test_successful_transfer() {
         let mut bank = Bank::new("Iron Bank".to_string());
-        bank.open_account("Alice".to_string(), Money::from_yuan(100));
-        bank.open_account("Bob".to_string(), Money::from_yuan(50));
+        bank.open_account("Alice".to_string(), Money::from_yuan(100).unwrap());
+        bank.open_account("Bob".to_string(), Money::from_yuan(50).unwrap());
 
-        let result = bank.transfer("Alice", "Bob", Money::from_yuan(40));
+        let result = bank.transfer("Alice", "Bob", Money::from_yuan(40).unwrap());
         assert!(result.is_ok());
 
-        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(60));
-        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(90));
+        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(60).unwrap());
+        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(90).unwrap());
     }
 
     #[test]
     fn test_insufficient_funds_transfer() {
         let mut bank = Bank::new("Iron Bank".to_string());
-        bank.open_account("Alice".to_string(), Money::from_yuan(100));
-        bank.open_account("Bob".to_string(), Money::from_yuan(50));
+        bank.open_account("Alice".to_string(), Money::from_yuan(100).unwrap());
+        bank.open_account("Bob".to_string(), Money::from_yuan(50).unwrap());
 
-        let result = bank.transfer("Alice", "Bob", Money::from_yuan(200));
+        let result = bank.transfer("Alice", "Bob", Money::from_yuan(200).unwrap());
         assert!(result.is_err());
 
-        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(100));
-        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(50));
+        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(100).unwrap());
+        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(50).unwrap());
     }
 
     #[test]
     fn test_credit_account_overdraft() {
         let mut bank = Bank::new("Iron Bank".to_string());
-        bank.open_credit("Bob".to_string(), Money::ZERO, Money::from_yuan(500));
-        bank.open_account("Alice".to_string(), Money::from_yuan(100));
+        bank.open_credit("Bob".to_string(), Money::ZERO, Money::from_yuan(500).unwrap());
+        bank.open_account("Alice".to_string(), Money::from_yuan(100).unwrap());
 
         // 1. Bob 透支 300 成功
-        assert!(bank.transfer("Bob", "Alice", Money::from_yuan(300)).is_ok());
-        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(-300));
-        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(400));
+        assert!(bank.transfer("Bob", "Alice", Money::from_yuan(300).unwrap()).is_ok());
+        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(-300).unwrap());
+        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(400).unwrap());
 
         // 2. Bob 再次透支 300 失败（总计 600 > 500 额度）
-        assert!(bank.transfer("Bob", "Alice", Money::from_yuan(300)).is_err());
-        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(-300));
-        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(400));
+        assert!(bank.transfer("Bob", "Alice", Money::from_yuan(300).unwrap()).is_err());
+        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(-300).unwrap());
+        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(400).unwrap());
     }
 
     #[test]
     fn test_transfer_to_self() {
         let mut bank = Bank::new(String::from("Iron Bank"));
 
-        bank.open_account("Alice".to_string(), Money::from_yuan(100));
-        let result = bank.transfer("Alice", "Alice", Money::from_yuan(50));
+        bank.open_account("Alice".to_string(), Money::from_yuan(100).unwrap());
+        let result = bank.transfer("Alice", "Alice", Money::from_yuan(50).unwrap());
         assert_eq!(result, Err(BankError::SameAccount));
-        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(100));
+        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(100).unwrap());
     }
 
     #[test]
     fn test_transfer_to_nonexistent_account() {
         let mut bank = Bank::new(String::from("Eris Bank"));
-        bank.open_account("Alice".to_string(), Money::from_yuan(100));
-        let result = bank.transfer("Alice", "Charlie", Money::from_yuan(100));
+        bank.open_account("Alice".to_string(), Money::from_yuan(100).unwrap());
+        let result = bank.transfer("Alice", "Charlie", Money::from_yuan(100).unwrap());
         assert_eq!(result, Err(BankError::AccountNotFound("Charlie".to_string())));
-        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(100));
+        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(100).unwrap());
     }
     #[test]
     fn test_vip_and_total_assets() {
         let mut bank = Bank::new(String::from("Eris Bank"));
-        bank.open_account("Alice".to_string(), Money::from_yuan(1000));
-        bank.open_account("Bob".to_string(), Money::from_yuan(500));
-        bank.open_account("Charlie".to_string(), Money::from_yuan(200));
+        bank.open_account("Alice".to_string(), Money::from_yuan(1000).unwrap());
+        bank.open_account("Bob".to_string(), Money::from_yuan(500).unwrap());
+        bank.open_account("Charlie".to_string(), Money::from_yuan(200).unwrap());
 
-        assert_eq!(bank.total_assets(), Money::from_yuan(1700));
+        assert_eq!(bank.total_assets(), Money::from_yuan(1700).unwrap());
 
-        let vips = bank.get_vip_accounts(Money::from_yuan(500));
+        let vips = bank.get_vip_accounts(Money::from_yuan(500).unwrap());
         assert_eq!(vips.len(), 2);
-        assert!(vips.iter().all(|acc| acc.balance() >= Money::from_yuan(500)));
+        assert!(vips.iter().all(|acc| acc.balance() >= Money::from_yuan(500).unwrap()));
     }
 
     #[test]
     fn test_transfer_from_nonexistent_account() {
         let mut bank = Bank::new(String::from("Eris Bank"));
-        bank.open_account("Bob".to_string(), Money::from_yuan(100));
-        let result = bank.transfer("Charlie", "Bob", Money::from_yuan(50));
+        bank.open_account("Bob".to_string(), Money::from_yuan(100).unwrap());
+        let result = bank.transfer("Charlie", "Bob", Money::from_yuan(50).unwrap());
         assert_eq!(result, Err(BankError::AccountNotFound("Charlie".to_string())));
-        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(100));
+        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(100).unwrap());
     }
 
     #[test]
     fn test_transfer_invalid_amount() {
         let mut bank = Bank::new(String::from("Iron Bank"));
-        bank.open_account("Alice".to_string(), Money::from_yuan(100));
-        bank.open_account("Bob".to_string(), Money::from_yuan(50));
+        bank.open_account("Alice".to_string(), Money::from_yuan(100).unwrap());
+        bank.open_account("Bob".to_string(), Money::from_yuan(50).unwrap());
 
-        assert_eq!(bank.transfer("Alice", "Bob", Money::from_yuan(-20)), Err(BankError::InvalidAmount(Money::from_yuan(-20))));
+        assert_eq!(bank.transfer("Alice", "Bob", Money::from_yuan(-20).unwrap()), Err(BankError::InvalidAmount(Money::from_yuan(-20).unwrap())));
         assert_eq!(bank.transfer("Alice", "Bob", Money::ZERO), Err(BankError::InvalidAmount(Money::ZERO)));
-        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(100));
-        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(50));
+        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(100).unwrap());
+        assert_eq!(bank.get_balance("Bob").unwrap(), Money::from_yuan(50).unwrap());
     }
 
     struct BrokenAccount;
@@ -223,12 +223,12 @@ use super::*;
     #[test]
     fn test_transfer_rollback_on_deposit_failure() {
         let mut bank = Bank::new(String::from("Iron Bank"));
-        bank.open_account("Alice".to_string(), Money::from_yuan(100));
+        bank.open_account("Alice".to_string(), Money::from_yuan(100).unwrap());
         bank.accounts.insert("Broken".to_string(), Box::new(BrokenAccount));
 
-        let result = bank.transfer("Alice", "Broken", Money::from_yuan(30));
+        let result = bank.transfer("Alice", "Broken", Money::from_yuan(30).unwrap());
         assert!(result.is_err());
-        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(100));
+        assert_eq!(bank.get_balance("Alice").unwrap(), Money::from_yuan(100).unwrap());
     }
 }
 
