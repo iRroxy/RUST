@@ -7,12 +7,14 @@ fn main() {
     println!("\n==== 工程化多模块银行系统测试 ====");
     let mut bank = Bank::new(String::from("Iron Bank"));
 
-    bank.open_account(String::from("Alice"), Money::from_yuan(100).unwrap());
+    bank.open_account(String::from("Alice"), Money::from_yuan(100).unwrap())
+        .unwrap();
     bank.open_credit(
         String::from("Bob"),
         Money::ZERO,
         Money::from_yuan(500).unwrap(),
-    );
+    )
+    .unwrap();
 
     println!("Alice 初始余额: {}", bank.get_balance("Alice").unwrap());
     println!("Bob 初始余额: {}", bank.get_balance("Bob").unwrap());

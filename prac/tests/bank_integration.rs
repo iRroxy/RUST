@@ -4,12 +4,14 @@ use prac::money::Money;
 #[test]
 fn test_bank_end_to_end_flow() {
     let mut bank = Bank::new(String::from("Federal Bank"));
-    bank.open_account(String::from("Alice"), Money::from_yuan(500).unwrap());
+    bank.open_account(String::from("Alice"), Money::from_yuan(500).unwrap())
+        .unwrap();
     bank.open_credit(
         String::from("Bob"),
         Money::from_yuan(100).unwrap(),
         Money::from_yuan(1000).unwrap(),
-    );
+    )
+    .unwrap();
 
     let result = bank.transfer("Bob", "Alice", Money::from_yuan(300).unwrap());
     assert!(result.is_ok());

@@ -8,6 +8,7 @@ pub enum BankError {
     AccountNotFound(String),
     SameAccount,
     Overflow,
+    AccountExists(String),
 }
 
 impl fmt::Display for BankError {
@@ -27,6 +28,9 @@ impl fmt::Display for BankError {
             }
             BankError::Overflow => {
                 write!(f, "arithmetic overflow occurred")
+            }
+            BankError::AccountExists(name) => {
+                write!(f, "The Account Exists: {name}")
             }
         }
     }
