@@ -11,7 +11,7 @@ impl Money {
         Self(cents)
     }
 
-    pub fn from_yuan(yuan: i64) -> Option<Self>{
+    pub fn from_yuan(yuan: i64) -> Option<Self> {
         yuan.checked_mul(100).map(Self)
     }
 
@@ -37,12 +37,13 @@ impl fmt::Display for Money {
         let abs = self.0.unsigned_abs();
         if self.0 < 0 {
             write!(f, "-{}.{:02}", abs / 100, abs % 100)
-        }else {
+        } else {
             write!(f, "{}.{:02}", abs / 100, abs % 100)
         }
     }
 }
 
+/// 溢出时 panic。业务代码中若需要安全的加法，请使用 [`Money::checked_add`]。
 impl Add for Money {
     type Output = Self;
     fn add(self, rhs: Self) -> Self {
@@ -50,12 +51,14 @@ impl Add for Money {
     }
 }
 
+/// 溢出时 panic。
 impl AddAssign for Money {
     fn add_assign(&mut self, rhs: Self) {
         self.0 += rhs.0
     }
 }
 
+/// 溢出时 panic。业务代码中若需要安全的减法，请使用 [`Money::checked_sub`]。
 impl Sub for Money {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
@@ -63,22 +66,24 @@ impl Sub for Money {
     }
 }
 
+/// 溢出时 panic。
 impl SubAssign for Money {
     fn sub_assign(&mut self, rhs: Self) {
         self.0 -= rhs.0
     }
 }
 
+/// 溢出时 panic。
 impl Sum for Money {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(Self::ZERO, |a, b| a+ b)
+        iter.fold(Self::ZERO, |a, b| a + b)
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-use super::*;
+    use super::*;
 
     #[test]
     fn test_from_yuan_overflow() {

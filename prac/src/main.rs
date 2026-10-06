@@ -8,7 +8,11 @@ fn main() {
     let mut bank = Bank::new(String::from("Iron Bank"));
 
     bank.open_account(String::from("Alice"), Money::from_yuan(100).unwrap());
-    bank.open_credit(String::from("Bob"), Money::ZERO, Money::from_yuan(500).unwrap());
+    bank.open_credit(
+        String::from("Bob"),
+        Money::ZERO,
+        Money::from_yuan(500).unwrap(),
+    );
 
     println!("Alice 初始余额: {}", bank.get_balance("Alice").unwrap());
     println!("Bob 初始余额: {}", bank.get_balance("Bob").unwrap());
@@ -28,5 +32,8 @@ fn main() {
         Err(e) => println!("捕获到预期错误: {e}"),
     }
 
-    println!("\n全行总资产: {}", bank.total_assets());
+    match bank.total_assets() {
+        Ok(total) => println!("\n全行总资产: {total}"),
+        Err(e) => println!("\n全行总资产计算失败: {e}"),
+    }
 }

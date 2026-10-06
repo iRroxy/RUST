@@ -1,5 +1,5 @@
-use std::fmt;
 use crate::money::Money;
+use std::fmt;
 
 #[derive(Debug, PartialEq)]
 pub enum BankError {
