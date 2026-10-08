@@ -1,19 +1,15 @@
+use minigrep::Config;
+use std::env;
+use std::process;
+
 fn main() {
-    let mut num = 5;
-
-    let r1 = &num as *const i32;
-    let r2 = &mut num as *mut i32;
-    unsafe {
-        println!("r1: {}", *r1);
-        println!("r2: {}", *r2);
+    let args: Vec<String> = env::args().collect();
+    let config = Config::build(&args).unwrap_or_else(|err| {
+        eprintln!("error! {err}");
+        process::exit(1);
+    });
+    if let Err(e) = Config::run(config) {
+        eprintln!("{e}");
+        process::exit(1);
     }
-    let address = 0x012345usize;
-    let r = address as *const i32;
-    unsafe {
-        println!("r: {}", *r);
-
-
-    }
-
-// vec!
 }
