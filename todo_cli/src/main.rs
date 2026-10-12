@@ -24,13 +24,28 @@ fn save_tasks(tasks: &[Task]) {
 
     fs::write("tasks.json", contents).expect("failed to write tasks.json");
 }
+fn parse_id(args: &[String]) -> Result<usize, String> {
+    let raw_id = args
+        .get(2)
+        .ok_or_else(|| "please enter task id".to_string())?;
+
+    raw_id
+        .parse::<usize>()
+        .map_err(|_| "task id must be a number".to_string())
+}
 fn main() {
     let args: Vec<String> = env::args().collect();
     let mut tasks = load_tasks();
 
     match args.get(1).map(String::as_str) {
         Some("add") => {
-            let title = args.get(2).expect("please enter task contents").to_string();
+            let title = match args.get(2) {
+                Some(title) if !title.trim().is_empty() => title.to_string(),
+                _ => {
+                    eprintln!("error: please enter task contents");
+                    return;
+                }
+            };
 
             let next_id = tasks.iter().map(|task| task.id).max().unwrap_or(0) + 1;
 
@@ -49,11 +64,13 @@ fn main() {
             }
         }
         Some("done") => {
-            let id: usize = args
-                .get(2)
-                .expect("please enter task id")
-                .parse()
-                .expect("task id must be a number");
+            let id = match parse_id(&args) {
+                Ok(id) => id,
+                Err(message) => {
+                    eprintln!("error: {message}");
+                    return;
+                }
+            };
 
             if let Some(task) = tasks.iter_mut().find(|task| task.id == id) {
                 task.completed = true;
@@ -64,11 +81,13 @@ fn main() {
             }
         }
         Some("delete") => {
-            let id: usize = args
-                .get(2)
-                .expect("please enter task id")
-                .parse()
-                .expect("task id must be a number");
+            let id = match parse_id(&args) {
+                Ok(id) => id,
+                Err(message) => {
+                    eprintln!("error: {message}");
+                    return;
+                }
+            };
 
             let old_len = tasks.len();
 
@@ -82,11 +101,14 @@ fn main() {
             }
         }
         Some("edit") => {
-            let id: usize = args
-                .get(2)
-                .expect("please enter task id")
-                .parse()
-                .expect("task id must be a number");
+            let id = match parse_id(&args) {
+                Ok(id) => id,
+                Err(message) => {
+                    eprintln!("error: {message}");
+                    return;
+                }
+            };
+
             let title = args
                 .get(3)
                 .expect("please enter new task title")
