@@ -116,21 +116,37 @@ fn edit_task(tasks: &mut [Task], id: usize, title: String) -> Result<(), CliErro
     task.title = title;
     Ok(())
 }
+fn delete_task(tasks: &mut Vec<Task>, id: usize) -> Result<(), CliError> {
+    let old_len = tasks.len();
+    tasks.retain(|task| task.id != id);
+
+    if tasks.len() == old_len {
+        return Err(CliError::TaskNotFound(id));
+    }
+
+    Ok(())
+}
+fn add_task(tasks: &mut Vec<Task>, title: String) -> usize {
+    let id = tasks.iter().map(|task| task.id).max().unwrap_or(0) + 1;
+
+    tasks.push(Task {
+        id,
+        title,
+        completed: false,
+    });
+
+    id
+}
+
 pub fn run(args: &[String]) -> Result<(), CliError> {
     let command = parse_command(args)?;
     let mut tasks = load_tasks()?;
 
     match command {
         Command::Add(title) => {
-            let new_id = tasks.iter().map(|task| task.id).max().unwrap_or(0) + 1;
-
-            tasks.push(Task {
-                id: new_id,
-                title,
-                completed: false,
-            });
+            let id = add_task(&mut tasks, title);
             save_tasks(&tasks)?;
-            println!("add task: {new_id}");
+            println!("add task: {id}");
         }
         Command::List => {
             for task in &tasks {
@@ -144,15 +160,9 @@ pub fn run(args: &[String]) -> Result<(), CliError> {
             println!("task {id} completed");
         }
         Command::Delete(id) => {
-            let old_len = tasks.len();
-            tasks.retain(|task| task.id != id);
-
-            if tasks.len() < old_len {
-                save_tasks(&tasks)?;
-                println!("task {id} deleted");
-            } else {
-                return Err(CliError::TaskNotFound(id));
-            }
+            delete_task(&mut tasks, id)?;
+            save_tasks(&tasks)?;
+            println!("task {id} deleted");
         }
         Command::Edit(id, title) => {
             edit_task(&mut tasks, id, title)?;
