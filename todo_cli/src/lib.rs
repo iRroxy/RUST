@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fs;
+use std::mem::take;
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 struct Task {
@@ -98,7 +99,15 @@ fn parse_command(args: &[String]) -> Result<Command, CliError> {
         _ => Ok(Command::Help),
     }
 }
+fn complete_task(tasks: &mut [Task], id: usize) -> Result<(), CliError> {
+    let task = tasks
+        .iter_mut()
+        .find(|task| task.id == id)
+        .ok_or(CliError::TaskNotFound(id))?;
 
+    task.completed = true;
+    Ok(())
+}
 pub fn run(args: &[String]) -> Result<(), CliError> {
     let command = parse_command(args)?;
     let mut tasks = load_tasks()?;
@@ -122,13 +131,9 @@ pub fn run(args: &[String]) -> Result<(), CliError> {
             }
         }
         Command::Done(id) => {
-            if let Some(task) = tasks.iter_mut().find(|task| task.id == id) {
-                task.completed = true;
-                save_tasks(&tasks)?;
-                println!("task {id} completed");
-            } else {
-                return Err(CliError::TaskNotFound(id));
-            }
+            complete_task(&mut tasks, id)?;
+            save_tasks(&tasks)?;
+            println!("task {id} completed");
         }
         Command::Delete(id) => {
             let old_len = tasks.len();
@@ -289,5 +294,43 @@ mod tests {
         let args = vec!["todo_cli".to_string(), "done".to_string(), too_large];
 
         assert_eq!(parse_id(&args), Err(CliError::InvalidId));
+    }
+    #[test]
+    fn complete_task_marks_only_target_as_completed() {
+        let mut tasks = vec![
+            Task {
+                id: 1,
+                title: "learn Rust".to_string(),
+                completed: false,
+            },
+            Task {
+                id: 2,
+                title: "write tests".to_string(),
+                completed: false,
+            },
+        ];
+
+        assert_eq!(complete_task(&mut tasks, 2), Ok(()));
+        assert!(!tasks[0].completed);
+        assert!(tasks[1].completed);
+    }
+    #[test]
+    fn complete_task_preserves_tasks_when_id_is_missing() {
+        let original = Task {
+            id: 1,
+            title: "learn Rust".to_string(),
+            completed: false,
+        };
+        let mut tasks = vec![Task {
+            id: original.id,
+            title: original.title.clone(),
+            completed: original.completed,
+        }];
+
+        assert_eq!(
+            complete_task(&mut tasks, 99),
+            Err(CliError::TaskNotFound(99))
+        );
+        assert_eq!(tasks, vec![original]);
     }
 }
