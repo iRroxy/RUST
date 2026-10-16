@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::fs;
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
@@ -16,33 +17,52 @@ enum Command {
     Edit(usize, String),
     Help,
 }
-fn load_tasks() -> Result<Vec<Task>, String> {
-    match fs::read_to_string("tasks.json") {
-        Ok(contents) => serde_json::from_str(&contents)
-            .map_err(|error| format!("failed to parse tasks.json: {error}")),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
-        Err(error) => Err(format!("failed to read tasks.json: {error}")),
+#[derive(Debug, PartialEq)]
+pub enum CliError {
+    Io(String),
+    Json(String),
+    MissingId,
+    InvalidId,
+    EmptyTitle,
+    TaskNotFound(usize),
+}
+
+impl fmt::Display for CliError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CliError::Io(err) => write!(f, "file error: {err}"),
+            CliError::Json(err) => write!(f, "json error: {err}"),
+            CliError::MissingId => write!(f, "please enter task id"),
+            CliError::InvalidId => write!(f, "task id must be a number"),
+            CliError::EmptyTitle => write!(f, "please enter task contents"),
+            CliError::TaskNotFound(id) => write!(f, "task {id} not found"),
+        }
     }
 }
-fn save_tasks(tasks: &[Task]) -> Result<(), String> {
+impl std::error::Error for CliError {}
+fn load_tasks() -> Result<Vec<Task>, CliError> {
+    match fs::read_to_string("tasks.json") {
+        Ok(contents) => serde_json::from_str(&contents)
+            .map_err(|error| CliError::Json(format!("failed to parse tasks.json: {error}"))),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
+        Err(error) => Err(CliError::Io(format!("failed to read tasks.json: {error}"))),
+    }
+}
+fn save_tasks(tasks: &[Task]) -> Result<(), CliError> {
     let contents = serde_json::to_string_pretty(tasks)
-        .map_err(|error| format!("failed to serialize tasks: {error}"))?;
+        .map_err(|error| CliError::Json(format!("failed to serialize tasks: {error}")))?;
 
     fs::write("tasks.json", contents)
-        .map_err(|error| format!("failed to write tasks.json: {error}"))?;
+        .map_err(|error| CliError::Io(format!("failed to write tasks.json: {error}")))?;
 
     Ok(())
 }
-fn parse_id(args: &[String]) -> Result<usize, String> {
-    let raw_id = args
-        .get(2)
-        .ok_or_else(|| "please enter task id".to_string())?;
+fn parse_id(args: &[String]) -> Result<usize, CliError> {
+    let raw_id = args.get(2).ok_or(CliError::MissingId)?;
 
-    raw_id
-        .parse::<usize>()
-        .map_err(|_| "task id must be a number".to_string())
+    raw_id.parse::<usize>().map_err(|_| CliError::InvalidId)
 }
-fn parse_command(args: &[String]) -> Result<Command, String> {
+fn parse_command(args: &[String]) -> Result<Command, CliError> {
     let action = match args.get(1) {
         Some(action) => action.as_str(),
         None => return Ok(Command::Help),
@@ -51,7 +71,7 @@ fn parse_command(args: &[String]) -> Result<Command, String> {
         "add" => {
             let title = match args.get(2) {
                 Some(title) if !title.trim().is_empty() => title.to_string(),
-                _ => return Err("please enter task contents".to_string()),
+                _ => return Err(CliError::EmptyTitle),
             };
             Ok(Command::Add(title))
         }
@@ -71,14 +91,15 @@ fn parse_command(args: &[String]) -> Result<Command, String> {
             let id = parse_id(args)?;
             let title = match args.get(3) {
                 Some(title) if !title.trim().is_empty() => title.to_string(),
-                _ => return Err("please enter new task title".to_string()),
+                _ => return Err(CliError::EmptyTitle),
             };
             Ok(Command::Edit(id, title))
         }
         _ => Ok(Command::Help),
     }
 }
-pub fn run(args: &[String]) -> Result<(), String> {
+
+pub fn run(args: &[String]) -> Result<(), CliError> {
     let command = parse_command(args)?;
     let mut tasks = load_tasks()?;
 
@@ -106,7 +127,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
                 save_tasks(&tasks)?;
                 println!("task {id} completed");
             } else {
-                return Err("task not found".to_string());
+                return Err(CliError::TaskNotFound(id));
             }
         }
         Command::Delete(id) => {
@@ -117,7 +138,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
                 save_tasks(&tasks)?;
                 println!("task {id} deleted");
             } else {
-                return Err("task not found".to_string());
+                return Err(CliError::TaskNotFound(id));
             }
         }
         Command::Edit(id, title) => {
@@ -126,7 +147,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
                 save_tasks(&tasks)?;
                 println!("task {id} updated");
             } else {
-                return Err("task not found".to_string());
+                return Err(CliError::TaskNotFound(id));
             }
         }
         Command::Help => {
@@ -171,7 +192,7 @@ mod tests {
     fn parse_id_rejects_missing_id() {
         let args = vec!["todo_cli".to_string(), "done".to_string()];
 
-        assert_eq!(parse_id(&args), Err("please enter task id".to_string()));
+        assert_eq!(parse_id(&args), Err(CliError::MissingId));
     }
     #[test]
     fn parse_id_rejects_invalid_number() {
@@ -181,7 +202,7 @@ mod tests {
             "abc".to_string(),
         ];
 
-        assert_eq!(parse_id(&args), Err("task id must be a number".to_string()));
+        assert_eq!(parse_id(&args), Err(CliError::InvalidId));
     }
     #[test]
     fn parse_command_parses_add() {
@@ -245,24 +266,28 @@ mod tests {
     #[test]
     fn parse_command_rejects_empty_add_title() {
         let no_title = vec!["todo_cli".to_string(), "add".to_string()];
-        assert_eq!(
-            parse_command(&no_title),
-            Err("please enter task contents".to_string())
-        );
+        assert_eq!(parse_command(&no_title), Err(CliError::EmptyTitle));
 
         let whitespace_title = vec!["todo_cli".to_string(), "add".to_string(), "   ".to_string()];
-        assert_eq!(
-            parse_command(&whitespace_title),
-            Err("please enter task contents".to_string())
-        );
+        assert_eq!(parse_command(&whitespace_title), Err(CliError::EmptyTitle));
     }
 
     #[test]
     fn parse_command_rejects_missing_edit_title() {
         let args = vec!["todo_cli".to_string(), "edit".to_string(), "1".to_string()];
-        assert_eq!(
-            parse_command(&args),
-            Err("please enter new task title".to_string())
-        );
+        assert_eq!(parse_command(&args), Err(CliError::EmptyTitle));
+    }
+    #[test]
+    fn parse_id_rejects_negative_number() {
+        let args = vec!["todo_cli".to_string(), "done".to_string(), "-1".to_string()];
+
+        assert_eq!(parse_id(&args), Err(CliError::InvalidId));
+    }
+    #[test]
+    fn parse_id_rejects_number_above_usize_max() {
+        let too_large = format!("{}0", usize::MAX);
+        let args = vec!["todo_cli".to_string(), "done".to_string(), too_large];
+
+        assert_eq!(parse_id(&args), Err(CliError::InvalidId));
     }
 }
