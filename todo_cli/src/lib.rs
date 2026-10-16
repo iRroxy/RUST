@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fs;
-use std::mem::take;
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 struct Task {
@@ -108,6 +107,15 @@ fn complete_task(tasks: &mut [Task], id: usize) -> Result<(), CliError> {
     task.completed = true;
     Ok(())
 }
+fn edit_task(tasks: &mut [Task], id: usize, title: String) -> Result<(), CliError> {
+    let task = tasks
+        .iter_mut()
+        .find(|task| task.id == id)
+        .ok_or(CliError::TaskNotFound(id))?;
+
+    task.title = title;
+    Ok(())
+}
 pub fn run(args: &[String]) -> Result<(), CliError> {
     let command = parse_command(args)?;
     let mut tasks = load_tasks()?;
@@ -147,13 +155,9 @@ pub fn run(args: &[String]) -> Result<(), CliError> {
             }
         }
         Command::Edit(id, title) => {
-            if let Some(task) = tasks.iter_mut().find(|task| task.id == id) {
-                task.title = title;
-                save_tasks(&tasks)?;
-                println!("task {id} updated");
-            } else {
-                return Err(CliError::TaskNotFound(id));
-            }
+            edit_task(&mut tasks, id, title)?;
+            save_tasks(&tasks)?;
+            println!("task {id} updated");
         }
         Command::Help => {
             println!("how to use:");
@@ -332,5 +336,49 @@ mod tests {
             Err(CliError::TaskNotFound(99))
         );
         assert_eq!(tasks, vec![original]);
+    }
+    #[test]
+    fn edit_task_changes_title_without_changing_id_or_status() {
+        let mut tasks = vec![Task {
+            id: 7,
+            title: "learn Rust".to_string(),
+            completed: true,
+        }];
+
+        assert_eq!(
+            edit_task(&mut tasks, 7, "practice Rust".to_string()),
+            Ok(())
+        );
+
+        assert_eq!(
+            tasks,
+            vec![Task {
+                id: 7,
+                title: "practice Rust".to_string(),
+                completed: true,
+            }]
+        );
+    }
+    #[test]
+    fn edit_task_preserves_tasks_when_id_is_missing() {
+        let mut tasks = vec![Task {
+            id: 7,
+            title: "learn Rust".to_string(),
+            completed: true,
+        }];
+
+        assert_eq!(
+            edit_task(&mut tasks, 99, "practice Rust".to_string()),
+            Err(CliError::TaskNotFound(99))
+        );
+
+        assert_eq!(
+            tasks,
+            vec![Task {
+                id: 7,
+                title: "learn Rust".to_string(),
+                completed: true,
+            }]
+        );
     }
 }
