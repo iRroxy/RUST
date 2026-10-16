@@ -140,6 +140,16 @@ fn add_task(tasks: &mut Vec<Task>, title: String) -> usize {
 
 pub fn run(args: &[String]) -> Result<(), CliError> {
     let command = parse_command(args)?;
+    if let Command::Help = command {
+        println!("how to use:");
+        println!("  todo_cli add \"contents\"");
+        println!("  todo_cli list");
+        println!("  todo_cli done <id>");
+        println!("  todo_cli delete <id>");
+        println!("  todo_cli edit <id> \"new title\"");
+        return Ok(());
+    }
+
     let mut tasks = load_tasks()?;
 
     match command {
@@ -169,14 +179,7 @@ pub fn run(args: &[String]) -> Result<(), CliError> {
             save_tasks(&tasks)?;
             println!("task {id} updated");
         }
-        Command::Help => {
-            println!("how to use:");
-            println!("  todo_cli add \"contents\"");
-            println!("  todo_cli list");
-            println!("  todo_cli done <id>");
-            println!("  todo_cli delete <id>");
-            println!("  todo_cli edit <id> \"new title\"");
-        }
+        Command::Help => {}
     }
 
     Ok(())
